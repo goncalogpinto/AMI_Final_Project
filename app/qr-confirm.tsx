@@ -1,122 +1,330 @@
-import * as Haptics from "expo-haptics";
+import { CameraView, useCameraPermissions } from "expo-camera";
 import { router, useLocalSearchParams } from "expo-router";
 import { useState } from "react";
-import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import {
+  ActivityIndicator,
+  Alert,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
 import { useAppContext } from "../context/AppContext";
 import { logInteraction } from "../utils/interactionLogger";
 
 export default function QRConfirmScreen() {
-  const { id, waitLabel, waitMinutes } = useLocalSearchParams();
+  const params = useLocalSearchParams<{
+    id?: string;
+    locationId?: string;
+    waitRange?: string;
+    waitLabel?: string;
+    waitMinutes?: string;
+  }>();
+
   const { getLocationById, updateLocationFromReport } = useAppContext();
 
-  const locationId = String(id);
-  const waitLabelText = String(waitLabel ?? "");
-  const waitMinutesNumber = Number(waitMinutes ?? 10);
-
-  const location = getLocationById(locationId);
+  const [permission, requestPermission] = useCameraPermissions();
+  const [scanned, setScanned] = useState(false);
   const [reportSent, setReportSent] = useState(false);
 
-  async function confirmReport() {
-    if (!location) return;
+  const locationId = params.locationId ?? params.id ?? "";
+  const waitRange = params.waitRange ?? "";
+  const waitLabel = params.waitLabel ?? getWaitLabel(waitRange);
+  const waitMinutes = params.waitMinutes ?? "";
 
-    updateLocationFromReport(location.id, waitMinutesNumber);
-    setReportSent(true);
+  const location = getLocationById(locationId);
+
+  function getWaitLabel(value: string) {
+    if (value === "0-5") return "0–5 min";
+    if (value === "5-10") return "5–10 min";
+    if (value === "10-15") return "10–15 min";
+    if (value === "15+") return "15+ min";
+    return value;
+  }
+
+  function submitReport(qrData: string) {
+    if (!location) {
+      Alert.alert("Erro", "Local não encontrado.");
+      return;
+    }
+
+    setScanned(true);
+
+    logInteraction("qr_code_scanned", "qr_confirm", {
+      locationId,
+      qrData,
+    });
+
+    // Usa waitMinutes quando vem do report.tsx.
+    // Se não existir, usa waitRange.
+    updateLocationFromReport(location.id, waitMinutes || waitRange);
 
     logInteraction("report_sent", "qr_confirm", {
       locationId: location.id,
       locationName: location.name,
-      waitLabel: waitLabelText,
-      waitMinutes: waitMinutesNumber,
+      waitRange,
+      waitLabel,
+      waitMinutes,
     });
 
-    await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    setReportSent(true);
   }
 
   if (!location) {
     return (
-      <View style={styles.page}>
+      <View style={styles.screen}>
         <View style={styles.phone}>
-          <View style={styles.content}>
-            <Text style={styles.title}>Local não encontrado</Text>
-            <Pressable style={styles.secondaryButton} onPress={() => router.push("/home")}>
-              <Text style={styles.secondaryButtonText}>Voltar ao início</Text>
-            </Pressable>
+          <Text style={styles.title}>Local não encontrado</Text>
+
+          <Text style={styles.description}>
+            Não foi possível identificar o local selecionado para este reporte.
+          </Text>
+
+          <Pressable style={styles.button} onPress={() => router.replace("/home")}>
+            <Text style={styles.buttonText}>Voltar ao início</Text>
+          </Pressable>
+        </View>
+      </View>
+    );
+  }
+
+  if (reportSent) {
+    return (
+      <View style={styles.screen}>
+        <View style={styles.phone}>
+          <View style={styles.successCircle}>
+            <Text style={styles.successIcon}>✓</Text>
           </View>
+
+          <Text style={styles.title}>Reporte enviado</Text>
+          <Text style={styles.description}>
+            Obrigado pela contribuição. O tempo de espera do {location.name} foi atualizado.
+          </Text>
+
+          <Pressable style={styles.button} onPress={() => router.replace("/home")}>
+            <Text style={styles.buttonText}>Voltar ao início</Text>
+          </Pressable>
+        </View>
+      </View>
+    );
+  }
+
+  if (!permission) {
+    return (
+      <View style={styles.screen}>
+        <View style={styles.phone}>
+          <ActivityIndicator />
+          <Text style={styles.description}>A verificar permissões da câmara...</Text>
+        </View>
+      </View>
+    );
+  }
+
+  if (!permission.granted) {
+    return (
+      <View style={styles.screen}>
+        <View style={styles.phone}>
+          <Text style={styles.backText} onPress={() => router.back()}>
+            ‹ Voltar
+          </Text>
+
+          <Text style={styles.title}>Permissão da câmara</Text>
+          <Text style={styles.description}>
+            Para confirmar o local, a aplicação precisa de acesso à câmara para ler um QR code.
+          </Text>
+
+          <Pressable
+            style={styles.button}
+            onPress={async () => {
+              const result = await requestPermission();
+
+              logInteraction("request_camera_permission", "qr_confirm", {
+                granted: result.granted,
+              });
+            }}
+          >
+            <Text style={styles.buttonText}>Permitir câmara</Text>
+          </Pressable>
+
+          <Pressable style={styles.secondaryButton} onPress={() => router.back()}>
+            <Text style={styles.secondaryButtonText}>Cancelar</Text>
+          </Pressable>
         </View>
       </View>
     );
   }
 
   return (
-    <View style={styles.page}>
+    <View style={styles.screen}>
       <View style={styles.phone}>
-        <ScrollView contentContainerStyle={styles.content}>
-          <Pressable onPress={() => router.back()}>
-            <Text style={styles.back}>← Voltar</Text>
-          </Pressable>
+        <Text style={styles.backText} onPress={() => router.back()}>
+          ‹ Voltar
+        </Text>
 
-          <Text style={styles.title}>Confirmar local</Text>
-          <Text style={styles.subtitle}>Simulação da confirmação por QR code no {location.name}.</Text>
+        <Text style={styles.title}>Ler QR code</Text>
+        <Text style={styles.description}>
+          Aponta a câmara para qualquer QR code para confirmar o reporte.
+        </Text>
 
-          <View style={styles.infoBox}>
-            <Text style={styles.infoTitle}>Reporte preparado</Text>
-            <Text style={styles.infoText}>Local: {location.name}</Text>
-            <Text style={styles.infoText}>Tempo estimado: {waitLabelText}</Text>
+        <View style={styles.summaryCard}>
+          <Text style={styles.summaryLabel}>Reporte preparado</Text>
+          <Text style={styles.summaryText}>Local: {location.name}</Text>
+          <Text style={styles.summaryText}>Tempo estimado: {waitLabel}</Text>
+        </View>
+
+        <View style={styles.cameraBox}>
+          <CameraView
+            style={styles.camera}
+            facing="back"
+            barcodeScannerSettings={{
+              barcodeTypes: ["qr"],
+            }}
+            onBarcodeScanned={
+              scanned
+                ? undefined
+                : (event) => {
+                    submitReport(event.data);
+                  }
+            }
+          />
+
+          <View style={styles.scanOverlay}>
+            <View style={styles.scanFrame} />
+            <Text style={styles.scanText}>A procurar QR code...</Text>
           </View>
+        </View>
 
-          {!reportSent && (
-            <View style={styles.qrBox}>
-              <Text style={styles.qrIcon}>▦</Text>
-              <Text style={styles.qrTitle}>QR code do local</Text>
-              <Text style={styles.qrText}>Esta etapa representa a validação do local através da câmara/QR code.</Text>
-            </View>
-          )}
-
-          {reportSent && (
-            <View style={styles.successBox}>
-              <Text style={styles.successIcon}>✓</Text>
-              <Text style={styles.successTitle}>Reporte enviado</Text>
-              <Text style={styles.successText}>
-                O reporte para o {location.name} foi registado. O tempo de espera foi atualizado para {waitMinutesNumber} min.
-              </Text>
-            </View>
-          )}
-
-          {!reportSent ? (
-            <Pressable style={styles.primaryButton} onPress={confirmReport}>
-              <Text style={styles.primaryButtonText}>Simular leitura QR</Text>
-            </Pressable>
-          ) : (
-            <Pressable style={styles.primaryButton} onPress={() => router.replace("/home")}>
-              <Text style={styles.primaryButtonText}>Voltar ao início</Text>
-            </Pressable>
-          )}
-        </ScrollView>
+        <Pressable
+          style={styles.secondaryButton}
+          onPress={() => {
+            setScanned(false);
+          }}
+        >
+          <Text style={styles.secondaryButtonText}>Ler novamente</Text>
+        </Pressable>
       </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  page: { flex: 1, backgroundColor: "#E5EDF2", alignItems: "center" },
-  phone: { flex: 1, width: "100%", maxWidth: 430, backgroundColor: "#F6F8FA" },
-  content: { padding: 24, paddingTop: 56, paddingBottom: 80 },
-  back: { color: "#0E7490", fontSize: 15, fontWeight: "700", marginBottom: 24 },
-  title: { fontSize: 28, fontWeight: "800", color: "#102A43" },
-  subtitle: { fontSize: 15, color: "#627D98", marginTop: 6, marginBottom: 24, lineHeight: 22 },
-  infoBox: { backgroundColor: "#EFF6FF", borderRadius: 18, padding: 18, marginBottom: 18 },
-  infoTitle: { fontSize: 16, fontWeight: "800", color: "#102A43", marginBottom: 8 },
-  infoText: { fontSize: 14, color: "#486581", marginTop: 4 },
-  qrBox: { backgroundColor: "#FFFFFF", borderRadius: 22, padding: 28, alignItems: "center", marginBottom: 18 },
-  qrIcon: { fontSize: 64, color: "#0E7490", marginBottom: 12 },
-  qrTitle: { fontSize: 20, fontWeight: "900", color: "#102A43", marginBottom: 8 },
-  qrText: { fontSize: 14, color: "#627D98", lineHeight: 20, textAlign: "center" },
-  successBox: { backgroundColor: "#DCFCE7", borderRadius: 22, padding: 24, alignItems: "center", marginBottom: 18 },
-  successIcon: { fontSize: 48, fontWeight: "900", color: "#16A34A", marginBottom: 8 },
-  successTitle: { fontSize: 22, fontWeight: "900", color: "#166534", marginBottom: 8 },
-  successText: { fontSize: 15, color: "#166534", textAlign: "center", lineHeight: 22 },
-  primaryButton: { backgroundColor: "#0E7490", borderRadius: 16, paddingVertical: 16, alignItems: "center" },
-  primaryButtonText: { color: "#FFFFFF", fontSize: 16, fontWeight: "800" },
-  secondaryButton: { marginTop: 12, borderWidth: 2, borderColor: "#0E7490", borderRadius: 16, paddingVertical: 16, alignItems: "center" },
-  secondaryButtonText: { color: "#0E7490", fontSize: 16, fontWeight: "800" },
+  screen: {
+    flex: 1,
+    backgroundColor: "#EAF1F4",
+    alignItems: "center",
+  },
+  phone: {
+    width: "100%",
+    maxWidth: 430,
+    flex: 1,
+    backgroundColor: "#F5F8FA",
+    paddingHorizontal: 24,
+    paddingTop: 54,
+  },
+  backText: {
+    color: "#0E7490",
+    fontSize: 16,
+    fontWeight: "800",
+    marginBottom: 24,
+  },
+  title: {
+    fontSize: 28,
+    fontWeight: "900",
+    color: "#172B3A",
+    marginBottom: 8,
+  },
+  description: {
+    color: "#60758A",
+    fontSize: 15,
+    lineHeight: 22,
+    marginBottom: 20,
+  },
+  summaryCard: {
+    backgroundColor: "#EAF4F7",
+    borderRadius: 18,
+    padding: 18,
+    marginBottom: 18,
+  },
+  summaryLabel: {
+    color: "#172B3A",
+    fontWeight: "900",
+    marginBottom: 8,
+  },
+  summaryText: {
+    color: "#60758A",
+    fontWeight: "700",
+    marginTop: 4,
+  },
+  cameraBox: {
+    height: 320,
+    borderRadius: 22,
+    overflow: "hidden",
+    backgroundColor: "#D8E8EE",
+    marginBottom: 16,
+  },
+  camera: {
+    flex: 1,
+  },
+  scanOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    alignItems: "center",
+    justifyContent: "center",
+    pointerEvents: "none",
+  },
+  scanFrame: {
+    width: 190,
+    height: 190,
+    borderWidth: 4,
+    borderColor: "#FFFFFF",
+    borderRadius: 22,
+    backgroundColor: "rgba(255,255,255,0.08)",
+  },
+  scanText: {
+    marginTop: 16,
+    color: "#FFFFFF",
+    fontWeight: "900",
+    textShadowColor: "rgba(0,0,0,0.35)",
+    textShadowRadius: 5,
+  },
+  successCircle: {
+    width: 96,
+    height: 96,
+    borderRadius: 48,
+    backgroundColor: "#DCFCE7",
+    alignItems: "center",
+    justifyContent: "center",
+    alignSelf: "center",
+    marginTop: 120,
+    marginBottom: 22,
+  },
+  successIcon: {
+    color: "#16A34A",
+    fontSize: 54,
+    fontWeight: "900",
+  },
+  button: {
+    backgroundColor: "#0E7490",
+    borderRadius: 16,
+    paddingVertical: 16,
+    alignItems: "center",
+    marginTop: 12,
+  },
+  buttonText: {
+    color: "#FFFFFF",
+    fontWeight: "900",
+    fontSize: 15,
+  },
+  secondaryButton: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 16,
+    paddingVertical: 15,
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "#DDE7ED",
+    marginTop: 10,
+  },
+  secondaryButtonText: {
+    color: "#0E7490",
+    fontWeight: "900",
+  },
 });

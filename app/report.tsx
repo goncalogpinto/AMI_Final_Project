@@ -32,13 +32,16 @@ export default function ReportScreen() {
     (location) => location.id === selectedLocationId
   );
 
-  const selectedWaitOption = waitOptions.find(
-    (option) => option.value === selectedWaitValue
-  ) ?? waitOptions[2];
+  const selectedWaitOption =
+    waitOptions.find((option) => option.value === selectedWaitValue) ??
+    waitOptions[2];
 
   async function handleContinue() {
+    if (!selectedLocationId) return;
+
     logInteraction("continue_report", "report", {
       locationId: selectedLocationId,
+      waitRange: selectedWaitOption.value,
       waitLabel: selectedWaitOption.label,
       waitMinutes: selectedWaitOption.minutes,
     });
@@ -48,7 +51,8 @@ export default function ReportScreen() {
     router.push({
       pathname: "/qr-confirm",
       params: {
-        id: selectedLocationId,
+        locationId: selectedLocationId,
+        waitRange: selectedWaitOption.value,
         waitLabel: selectedWaitOption.label,
         waitMinutes: String(selectedWaitOption.minutes),
       },
@@ -113,6 +117,7 @@ export default function ReportScreen() {
                   setSelectedWaitValue(option.value);
 
                   logInteraction("select_report_wait", "report", {
+                    waitRange: option.value,
                     waitLabel: option.label,
                     waitMinutes: option.minutes,
                   });
@@ -133,7 +138,9 @@ export default function ReportScreen() {
           <View style={styles.infoBox}>
             <Text style={styles.infoTitle}>Resumo do reporte</Text>
             <Text style={styles.infoText}>Local: {selectedLocation?.name}</Text>
-            <Text style={styles.infoText}>Espera estimada: {selectedWaitOption.label}</Text>
+            <Text style={styles.infoText}>
+              Espera estimada: {selectedWaitOption.label}
+            </Text>
           </View>
 
           <Pressable style={styles.primaryButton} onPress={handleContinue}>
@@ -146,21 +153,98 @@ export default function ReportScreen() {
 }
 
 const styles = StyleSheet.create({
-  page: { flex: 1, backgroundColor: "#E5EDF2", alignItems: "center" },
-  phone: { flex: 1, width: "100%", maxWidth: 430, backgroundColor: "#F6F8FA" },
-  content: { padding: 24, paddingTop: 56, paddingBottom: 80 },
-  back: { color: "#0E7490", fontSize: 15, fontWeight: "700", marginBottom: 24 },
-  title: { fontSize: 28, fontWeight: "800", color: "#102A43" },
-  subtitle: { fontSize: 15, color: "#627D98", marginTop: 6, marginBottom: 24, lineHeight: 22 },
-  section: { backgroundColor: "#FFFFFF", borderRadius: 20, padding: 18, marginBottom: 18 },
-  sectionTitle: { fontSize: 17, fontWeight: "800", color: "#102A43", marginBottom: 14 },
-  optionButton: { borderWidth: 2, borderColor: "#E6EDF3", borderRadius: 14, paddingVertical: 14, paddingHorizontal: 16, marginBottom: 10 },
-  optionButtonActive: { borderColor: "#0E7490", backgroundColor: "#E0F7FA" },
-  optionText: { fontSize: 16, fontWeight: "700", color: "#486581" },
-  optionTextActive: { color: "#0E7490" },
-  infoBox: { backgroundColor: "#EFF6FF", borderRadius: 18, padding: 18, marginBottom: 18 },
-  infoTitle: { fontSize: 16, fontWeight: "800", color: "#102A43", marginBottom: 8 },
-  infoText: { fontSize: 14, color: "#486581", marginTop: 4 },
-  primaryButton: { backgroundColor: "#0E7490", borderRadius: 16, paddingVertical: 16, alignItems: "center" },
-  primaryButtonText: { color: "#FFFFFF", fontSize: 16, fontWeight: "800" },
+  page: {
+    flex: 1,
+    backgroundColor: "#E5EDF2",
+    alignItems: "center",
+  },
+  phone: {
+    flex: 1,
+    width: "100%",
+    maxWidth: 430,
+    backgroundColor: "#F6F8FA",
+  },
+  content: {
+    padding: 24,
+    paddingTop: 56,
+    paddingBottom: 80,
+  },
+  back: {
+    color: "#0E7490",
+    fontSize: 15,
+    fontWeight: "700",
+    marginBottom: 24,
+  },
+  title: {
+    fontSize: 28,
+    fontWeight: "800",
+    color: "#102A43",
+  },
+  subtitle: {
+    fontSize: 15,
+    color: "#627D98",
+    marginTop: 6,
+    marginBottom: 24,
+    lineHeight: 22,
+  },
+  section: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 20,
+    padding: 18,
+    marginBottom: 18,
+  },
+  sectionTitle: {
+    fontSize: 17,
+    fontWeight: "800",
+    color: "#102A43",
+    marginBottom: 14,
+  },
+  optionButton: {
+    borderWidth: 2,
+    borderColor: "#E6EDF3",
+    borderRadius: 14,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    marginBottom: 10,
+  },
+  optionButtonActive: {
+    borderColor: "#0E7490",
+    backgroundColor: "#E0F7FA",
+  },
+  optionText: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: "#486581",
+  },
+  optionTextActive: {
+    color: "#0E7490",
+  },
+  infoBox: {
+    backgroundColor: "#EFF6FF",
+    borderRadius: 18,
+    padding: 18,
+    marginBottom: 18,
+  },
+  infoTitle: {
+    fontSize: 16,
+    fontWeight: "800",
+    color: "#102A43",
+    marginBottom: 8,
+  },
+  infoText: {
+    fontSize: 14,
+    color: "#486581",
+    marginTop: 4,
+  },
+  primaryButton: {
+    backgroundColor: "#0E7490",
+    borderRadius: 16,
+    paddingVertical: 16,
+    alignItems: "center",
+  },
+  primaryButtonText: {
+    color: "#FFFFFF",
+    fontSize: 16,
+    fontWeight: "800",
+  },
 });

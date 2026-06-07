@@ -9,7 +9,11 @@
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "infoPlist": {
+        "NSCameraUsageDescription": "O CampusFlow usa a câmara para confirmar reportes através de QR code.",
+        "NSLocationWhenInUseUsageDescription": "O CampusFlow usa a localização para ordenar locais próximos no campus."
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -18,6 +22,11 @@
         "backgroundImage": "./assets/images/android-icon-background.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
+      "permissions": [
+        "CAMERA",
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_COARSE_LOCATION"
+      ],
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false
     },
@@ -27,6 +36,18 @@
     },
     "plugins": [
       "expo-router",
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "O CampusFlow usa a câmara para confirmar reportes através de QR code."
+        }
+      ],
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "O CampusFlow usa a localização para ordenar locais próximos no campus."
+        }
+      ],
       [
         "expo-splash-screen",
         {
