@@ -20,6 +20,8 @@ A aplicação permite consultar tempos de espera em locais do campus do ISEL, re
 - Criação e cancelamento de alertas
 - Alertas ativos, alertas passados e notificações
 - Feedback visual, textual e háptico/vibração
+
+Gonçalo Pinto, AMI, ISEL 2026
 - Registo de logs de interação para testes de usabilidade
 
 ## Como correr
