@@ -1,0 +1,58 @@
+export const locations = [
+  {
+    id: "refeitorio",
+    name: "Refeitório",
+    waitTime: 18,
+    status: "Longa",
+    lastReport: "há 3 min",
+    description: "Fila principal do refeitório do campus.",
+    history: [
+      { time: "13:00", wait: 15 },
+      { time: "13:30", wait: 18 },
+      { time: "14:00", wait: 20 },
+      { time: "14:30", wait: 18 },
+    ],
+  },
+  {
+    id: "cafe",
+    name: "Café",
+    waitTime: 6,
+    status: "Curta",
+    lastReport: "há 2 min",
+    description: "Zona de café usada frequentemente entre aulas.",
+    history: [
+      { time: "13:00", wait: 5 },
+      { time: "13:30", wait: 6 },
+      { time: "14:00", wait: 8 },
+      { time: "14:30", wait: 6 },
+    ],
+  },
+  {
+    id: "firmino",
+    name: "Firmino",
+    waitTime: 9,
+    status: "Moderada",
+    lastReport: "há 5 min",
+    description: "Espaço de restauração no campus.",
+    history: [
+      { time: "13:00", wait: 7 },
+      { time: "13:30", wait: 9 },
+      { time: "14:00", wait: 12 },
+      { time: "14:30", wait: 9 },
+    ],
+  },
+  {
+    id: "secretaria",
+    name: "Secretaria",
+    waitTime: 14,
+    status: "Moderada",
+    lastReport: "há 10 min",
+    description: "Serviço administrativo do ISEL.",
+    history: [
+      { time: "10:00", wait: 10 },
+      { time: "11:00", wait: 12 },
+      { time: "12:00", wait: 16 },
+      { time: "13:00", wait: 14 },
+    ],
+  },
+];
